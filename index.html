@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Ảnh Nổi Nội Bộ</title>
+    <title>Kho Ảnh Nội Bộ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,13 +17,9 @@
         <!-- Form Upload -->
         <section class="upload-section">
             <h2>Tải ảnh mới lên</h2>
-            <div class="token-box">
-                <input type="password" id="githubTokenInput" placeholder="GitHub Personal Access Token" autocomplete="off">
-                <button id="saveTokenBtn" type="button">Lưu Token</button>
-            </div>
             <div class="upload-box">
                 <input type="file" id="imageInput" accept="image/*">
-                <button id="uploadBtn" onclick="uploadImage()">Tải Lên Repo</button>
+                <button id="uploadBtn" onclick="uploadImage()">Tải Lên Cloud</button>
             </div>
             <p id="statusMessage" class="status-msg"></p>
         </section>
@@ -32,7 +28,7 @@
         <section class="gallery-section">
             <h2>Tất cả hình ảnh</h2>
             <div id="gallery" class="gallery-grid">
-                <!-- Ảnh sẽ tự động load vào đây -->
+                <!-- Ảnh sẽ tự động xuất hiện ở đây sau khi upload -->
             </div>
         </section>
     </main>

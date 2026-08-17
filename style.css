@@ -54,15 +54,12 @@ header p {
     margin-bottom: 15px;
 }
 
-.token-box,
 .upload-box {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
 }
 
-input[type="password"],
 input[type="file"] {
     background: #2d2d2d;
     color: var(--text-color);
@@ -71,10 +68,6 @@ input[type="file"] {
     border: 1px solid var(--border-color);
     flex: 1;
     min-width: 200px;
-}
-
-input[type="password"]::placeholder {
-    color: var(--text-secondary);
 }
 
 button {
@@ -122,6 +115,7 @@ button:disabled {
     border: 1px solid var(--border-color);
     position: relative;
     aspect-ratio: 1 / 1;
+    cursor: pointer;
 }
 
 .img-card img {

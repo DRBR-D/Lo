@@ -1,12 +1,14 @@
 // ==================== CẤU HÌNH CLOUDINARY ====================
+// Thay Cloud Name lấy từ trang Dashboard Cloudinary của bạn:
 const CLOUD_NAME    = "dxiuwrick"; 
+
+// Preset name bạn tạo trên Cloudinary (Ví dụ: my_preset):
 const UPLOAD_PRESET = "my_preset"; 
 // ============================================================
 
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
-const LIST_URL   = `https://res.cloudinary.com/${CLOUD_NAME}/image/list/v1.json`;
 
-// Tải danh sách ảnh khi trang web load
+// Khởi tạo gallery khi load trang
 document.addEventListener("DOMContentLoaded", loadGallery);
 
 // 1. Hàm Upload ảnh trực tiếp lên Cloudinary
@@ -42,7 +44,10 @@ async function uploadImage() {
             statusMsg.innerText = "Upload ảnh thành công!";
             fileInput.value = "";
             
-            // Hiển thị ngay ảnh vừa upload lên giao diện
+            // Lưu URL ảnh vào bộ nhớ trình duyệt local
+            saveImageUrl(data.secure_url);
+
+            // Hiển thị ngay ảnh mới lên đầu gallery
             appendImageToGallery(data.secure_url);
         } else {
             throw new Error(data.error?.message || "Upload thất bại");
@@ -57,12 +62,20 @@ async function uploadImage() {
     }
 }
 
-// 2. Hàm thêm ảnh vào giao diện
+// 2. Lưu danh sách URL ảnh vào LocalStorage để không bị mất khi F5
+function saveImageUrl(url) {
+    let images = JSON.parse(localStorage.getItem("MY_GALLERY_IMAGES") || "[]");
+    images.unshift(url);
+    localStorage.setItem("MY_GALLERY_IMAGES", JSON.stringify(images));
+}
+
+// 3. Hàm render 1 thẻ ảnh ra màn hình
 function appendImageToGallery(url) {
     const gallery = document.getElementById("gallery");
     
-    // Xóa chữ "Chưa có ảnh" nếu có
-    if (gallery.querySelector("p")) {
+    // Xóa dòng thông báo chưa có ảnh nếu có
+    const emptyMsg = gallery.querySelector(".empty-msg");
+    if (emptyMsg) {
         gallery.innerHTML = "";
     }
 
@@ -72,14 +85,35 @@ function appendImageToGallery(url) {
     const img = document.createElement("img");
     img.src = url;
     img.loading = "lazy";
+    
+    // Click vào để mở ảnh gốc full size ở tab mới
     card.onclick = () => window.open(url, "_blank");
 
     card.appendChild(img);
-    gallery.insertBefore(card, gallery.firstChild); // Đưa ảnh mới nhất lên đầu
+    gallery.insertBefore(card, gallery.firstChild); // Đưa ảnh mới tải lên trên cùng
 }
 
-// 3. Khởi tạo kho trống nếu mới dùng
+// 4. Load lại toàn bộ ảnh cũ đã lưu khi mở trang
 function loadGallery() {
     const gallery = document.getElementById("gallery");
-    gallery.innerHTML = "<p>Chọn và upload ảnh để chia sẻ với mọi người!</p>";
+    let images = JSON.parse(localStorage.getItem("MY_GALLERY_IMAGES") || "[]");
+
+    if (images.length === 0) {
+        gallery.innerHTML = "<p class='empty-msg'>Chưa có ảnh nào. Hãy chọn file và bấm Upload!</p>";
+        return;
+    }
+
+    gallery.innerHTML = "";
+    images.forEach(url => {
+        const card = document.createElement("div");
+        card.className = "img-card";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.loading = "lazy";
+        card.onclick = () => window.open(url, "_blank");
+
+        card.appendChild(img);
+        gallery.appendChild(card);
+    });
 }
