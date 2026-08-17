@@ -1,8 +1,7 @@
-// Import SDK Firebase v10
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// Thông tin cấu hình Firebase
+// Config Firebase của dự án "menu"
 const firebaseConfig = {
     apiKey: "AIzaSyA5o5FjDgTiYtHw8uaK6_eXxAZ6Go2Ppew",
     authDomain: "menu-bcf7e.firebaseapp.com",
@@ -14,24 +13,33 @@ const firebaseConfig = {
     measurementId: "G-7LVTQL5BN8"
 };
 
-// Khởi tạo Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const photosRef = ref(database, 'photos');
 
-// 1. Lắng nghe dữ liệu Realtime và hiển thị ảnh
+let currentActiveKey = null;
+let currentActiveBase64 = null;
+
+// 1. Lắng nghe danh sách ảnh Real-time từ Firebase Database
 onValue(photosRef, (snapshot) => {
     const gallery = document.getElementById("gallery");
+    const photoCount = document.getElementById("photoCount");
     gallery.innerHTML = "";
 
     const data = snapshot.val();
     if (!data) {
-        gallery.innerHTML = "<p class='empty-msg'>Chưa có ảnh nào. Bấm chọn file để tải lên nhé!</p>";
+        photoCount.innerText = "0 ảnh";
+        gallery.innerHTML = "<div class='empty-box'>Chưa có khoảnh khắc nào. Hãy tải bức ảnh đầu tiên lên!</div>";
         return;
     }
 
-    // Đảo ngược mảng để ảnh mới nhất xuất hiện trên đầu
-    const items = Object.values(data).reverse();
+    // Chuyển dữ liệu sang mảng kèm ID Key để xử lý xóa/tải
+    const items = Object.keys(data).map(key => ({
+        key: key,
+        ...data[key]
+    })).reverse(); // Mới nhất lên đầu
+
+    photoCount.innerText = `${items.length} ảnh`;
 
     items.forEach((item) => {
         const card = document.createElement("div");
@@ -40,27 +48,68 @@ onValue(photosRef, (snapshot) => {
         const img = document.createElement("img");
         img.src = item.base64;
         img.loading = "lazy";
-        
-        // Bấm vào ảnh để xem kích thước đầy đủ
-        card.onclick = () => {
-            const w = window.open("");
-            w.document.write(`<body style="margin:0; background:#121212; display:flex; justify-content:center; align-items:center; min-height:100vh;"><img src="${item.base64}" style="max-width:90%; max-height:90vh; border-radius:8px;"></body>`);
-        };
+
+        card.onclick = () => openModal(item.key, item.base64);
 
         card.appendChild(img);
         gallery.appendChild(card);
     });
 }, (error) => {
-    console.error("Lỗi kết nối Firebase:", error);
-    const statusMsg = document.getElementById("statusMessage");
-    if (statusMsg) {
-        statusMsg.style.color = "#ef4444";
-        statusMsg.innerText = "Lỗi kết nối Realtime Database! Kiểm tra lại Rules.";
-    }
+    console.error("Firebase Error:", error);
 });
 
-// 2. Hàm tự động nén ảnh và chuyển thành Base64
-function convertFileToBase64(file, maxWidth = 800) {
+// 2. Mở Modal xem ảnh
+function openModal(key, base64) {
+    currentActiveKey = key;
+    currentActiveBase64 = base64;
+    
+    const modal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("modalImage");
+    
+    modalImg.src = base64;
+    modal.classList.add("active");
+    document.body.style.overflow = "hidden"; // Chống cuộn trang phía sau
+}
+
+// 3. Đóng Modal (Nút Back)
+window.closeModal = function() {
+    const modal = document.getElementById("imageModal");
+    modal.classList.remove("active");
+    document.body.style.overflow = "auto";
+    currentActiveKey = null;
+    currentActiveBase64 = null;
+};
+
+// 4. Tính năng Tải Ảnh về Máy
+window.downloadCurrentImage = function() {
+    if (!currentActiveBase64) return;
+    
+    const a = document.createElement("a");
+    a.href = currentActiveBase64;
+    a.download = `photo_${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+
+// 5. Tính năng Xóa Ảnh (Xóa trực tiếp trên Firebase)
+window.deleteCurrentImage = async function() {
+    if (!currentActiveKey) return;
+    
+    const confirmDelete = confirm("Bạn có chắc chắn muốn xóa bức ảnh này không?");
+    if (!confirmDelete) return;
+
+    try {
+        const targetRef = ref(database, `photos/${currentActiveKey}`);
+        await remove(targetRef);
+        closeModal();
+    } catch (err) {
+        alert("Lỗi khi xóa ảnh: " + err.message);
+    }
+};
+
+// 6. Nén ảnh giữ độ nét cao và Upload lên Firebase
+function convertFileToBase64(file, maxWidth = 1200) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -82,8 +131,7 @@ function convertFileToBase64(file, maxWidth = 800) {
 
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(img, 0, 0, width, height);
-                // Nén ảnh chất lượng 0.7 JPEG giúp dung lượng cực nhẹ
-                resolve(canvas.toDataURL("image/jpeg", 0.7));
+                resolve(canvas.toDataURL("image/jpeg", 0.75));
             };
             img.onerror = (err) => reject(err);
         };
@@ -91,14 +139,13 @@ function convertFileToBase64(file, maxWidth = 800) {
     });
 }
 
-// 3. Hàm Upload đưa dữ liệu lên Realtime Database
 window.uploadImage = async function() {
     const fileInput = document.getElementById("imageInput");
     const uploadBtn = document.getElementById("uploadBtn");
     const statusMsg = document.getElementById("statusMessage");
 
     if (fileInput.files.length === 0) {
-        alert("Vui lòng chọn 1 hình ảnh!");
+        alert("Vui lòng chọn 1 bức ảnh!");
         return;
     }
 
@@ -106,24 +153,22 @@ window.uploadImage = async function() {
 
     try {
         uploadBtn.disabled = true;
-        statusMsg.style.color = "#3b82f6";
-        statusMsg.innerText = "Đang xử lý và tải ảnh lên...";
+        statusMsg.style.color = "#38bdf8";
+        statusMsg.innerText = "Đang tối ưu và tải ảnh lên...";
 
-        // Nén và chuyển đổi ảnh
         const base64String = await convertFileToBase64(file);
 
-        // Đẩy lên Firebase Realtime Database
         await push(photosRef, {
             base64: base64String,
             createdAt: Date.now()
         });
 
         statusMsg.style.color = "#10b981";
-        statusMsg.innerText = "Upload ảnh thành công!";
+        statusMsg.innerText = "Tải ảnh lên thành công!";
         fileInput.value = "";
 
     } catch (error) {
-        console.error("Upload Error:", error);
+        console.error(error);
         statusMsg.style.color = "#ef4444";
         statusMsg.innerText = `Lỗi: ${error.message}`;
     } finally {

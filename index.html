@@ -3,35 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Ảnh Realtime</title>
+    <title>Thư Viện Ảnh Sang Trọng</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Font chữ Inter hiện đại -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <header>
-        <h1>📸 Thư Viện Ảnh Realtime</h1>
-        <p>Lưu trữ & đồng bộ ảnh tức thì qua Realtime Database</p>
-    </header>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-badge">REALTIME GALLERY</div>
+            <h1>📸 Kho Ảnh Nội Bộ</h1>
+            <p>Không gian lưu trữ & chia sẻ khoảnh khắc cao cấp</p>
+        </header>
 
-    <main>
-        <section class="upload-section">
-            <h2>Tải ảnh mới lên</h2>
-            <div class="upload-box">
+        <!-- NGĂN 1: TẢI LÊN -->
+        <section class="section-card upload-compartment">
+            <div class="compartment-header">
+                <h2><span>📤</span> Ngăn Tải Ảnh Lên</h2>
+                <p>Chọn hình ảnh từ thiết bị để chia sẻ ngay lập tức</p>
+            </div>
+            
+            <div class="upload-dropzone">
                 <input type="file" id="imageInput" accept="image/*">
-                <button id="uploadBtn" onclick="uploadImage()">Tải Lên</button>
+                <div class="upload-ui">
+                    <div class="icon-upload">✨</div>
+                    <span class="upload-text">Nhấn vào đây để chọn ảnh</span>
+                    <span class="upload-hint">Hỗ trợ JPG, PNG, WEBP (Tối đa nén tự động)</span>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <button id="uploadBtn" onclick="uploadImage()">
+                    <span>Tải Lên Cloud</span>
+                </button>
             </div>
             <p id="statusMessage" class="status-msg"></p>
         </section>
 
-        <section class="gallery-section">
-            <h2>Tất cả hình ảnh</h2>
+        <!-- NGĂN 2: THƯ VIỆN ĐỒNG BỘ -->
+        <section class="section-card gallery-compartment">
+            <div class="compartment-header header-with-badge">
+                <div>
+                    <h2><span>🖼️</span> Ngăn Thư Viện Ảnh</h2>
+                    <p>Tất cả khoảnh khắc đã được lưu trữ</p>
+                </div>
+                <span id="photoCount" class="count-badge">0 ảnh</span>
+            </div>
+
             <div id="gallery" class="gallery-grid">
-                <!-- Danh sách ảnh tự động load ở đây -->
+                <!-- Danh sách ảnh hiển thị tại đây -->
             </div>
         </section>
-    </main>
+    </div>
 
-    <!-- Bắt buộc type="module" để chạy SDK Firebase ES Module -->
+    <!-- KHUNG XEM ẢNH FULLSCREEN (MODAL) -->
+    <div id="imageModal" class="modal">
+        <div class="modal-backdrop" onclick="closeModal()"></div>
+        <div class="modal-wrapper">
+            <!-- Thanh công cụ trên cùng -->
+            <div class="modal-topbar">
+                <button class="btn-modal btn-back" onclick="closeModal()">
+                    ✕ <span>Trở về</span>
+                </button>
+                <div class="modal-actions">
+                    <button class="btn-modal btn-download" onclick="downloadCurrentImage()">
+                        📥 <span>Tải xuống</span>
+                    </button>
+                    <button class="btn-modal btn-delete" onclick="deleteCurrentImage()">
+                        🗑️ <span>Xóa ảnh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Khung ảnh chính -->
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="Xem ảnh toàn màn hình">
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="app.js"></script>
 </body>
 </html>
