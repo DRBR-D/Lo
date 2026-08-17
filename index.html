@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Ảnh Nội Bộ</title>
+    <title>Kho Ảnh Realtime</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <h1>📸 Thư Viện Ảnh Nội Bộ</h1>
-        <p>Kho lưu trữ và chia sẻ khoảnh khắc</p>
+        <h1>📸 Thư Viện Ảnh Realtime</h1>
+        <p>Lưu trữ & đồng bộ ảnh tức thì qua Realtime Database</p>
     </header>
 
     <main>
@@ -18,7 +18,7 @@
             <h2>Tải ảnh mới lên</h2>
             <div class="upload-box">
                 <input type="file" id="imageInput" accept="image/*">
-                <button id="uploadBtn" onclick="uploadImage()">Tải Lên Firebase</button>
+                <button id="uploadBtn" onclick="uploadImage()">Tải Lên</button>
             </div>
             <p id="statusMessage" class="status-msg"></p>
         </section>
@@ -26,12 +26,11 @@
         <section class="gallery-section">
             <h2>Tất cả hình ảnh</h2>
             <div id="gallery" class="gallery-grid">
-                <!-- Ảnh sẽ tự động hiển thị real-time tại đây -->
+                <!-- Dữ liệu real-time tự load ở đây -->
             </div>
         </section>
     </main>
 
-    <!-- Lưu ý: Phải có type="module" thì mới dùng được import Firebase -->
     <script type="module" src="app.js"></script>
 </body>
 </html>
