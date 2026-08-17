@@ -14,25 +14,24 @@
     </header>
 
     <main>
-        <!-- Form Upload -->
         <section class="upload-section">
             <h2>Tải ảnh mới lên</h2>
             <div class="upload-box">
                 <input type="file" id="imageInput" accept="image/*">
-                <button id="uploadBtn" onclick="uploadImage()">Tải Lên Cloud</button>
+                <button id="uploadBtn" onclick="uploadImage()">Tải Lên Firebase</button>
             </div>
             <p id="statusMessage" class="status-msg"></p>
         </section>
 
-        <!-- Khung hiển thị danh sách ảnh -->
         <section class="gallery-section">
             <h2>Tất cả hình ảnh</h2>
             <div id="gallery" class="gallery-grid">
-                <!-- Ảnh sẽ tự động xuất hiện ở đây sau khi upload -->
+                <!-- Ảnh sẽ tự động hiển thị real-time tại đây -->
             </div>
         </section>
     </main>
 
-    <script src="app.js"></script>
+    <!-- Lưu ý: Phải có type="module" thì mới dùng được import Firebase -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>
