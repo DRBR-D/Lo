@@ -1,18 +1,76 @@
 // ==================== CẤU HÌNH GITHUB ====================
-// ⚠️ Thay thế thông tin của bạn tại đây:
+// ⚠️ Không lưu token trực tiếp trong mã nguồn. Token nên được nhập thủ công
+// ở giao diện hoặc lưu trong localStorage của trình duyệt.
 const GITHUB_USERNAME = "DRBR-D";
 const GITHUB_REPO     = "Lo";
 const GITHUB_FOLDER   = "images";
-
-// Tạo Personal Access Token (Fine-grained hoặc Classic với quyền 'repo')
-// Dán token của bạn vào đây (Lưu ý: Chỉ dùng token này cho repo riêng tư / nhóm 3 người chơi thân)
-const GITHUB_TOKEN    = "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";
+const TOKEN_STORAGE_KEY = "github_pat_lo";
 // ==========================================================
 
 const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${GITHUB_FOLDER}`;
 
+function getGithubToken() {
+    return (localStorage.getItem(TOKEN_STORAGE_KEY) || "").trim();
+}
+
+function saveGithubToken(token) {
+    const cleanToken = (token || "").trim();
+    if (!cleanToken) {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        return "";
+    }
+
+    localStorage.setItem(TOKEN_STORAGE_KEY, cleanToken);
+    return cleanToken;
+}
+
+function getGithubHeaders() {
+    const token = getGithubToken();
+    if (!token) {
+        throw new Error("Thiếu TOKEN GitHub. Hãy nhập token hợp lệ trước khi tải ảnh.");
+    }
+
+    return {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+    };
+}
+
+function setupTokenInput() {
+    const tokenInput = document.getElementById("githubTokenInput");
+    const saveTokenBtn = document.getElementById("saveTokenBtn");
+    const savedToken = getGithubToken();
+
+    if (tokenInput && savedToken) {
+        tokenInput.value = savedToken;
+    }
+
+    if (saveTokenBtn) {
+        saveTokenBtn.addEventListener("click", () => {
+            const token = saveGithubToken(tokenInput ? tokenInput.value : "");
+            const statusMsg = document.getElementById("statusMessage");
+
+            if (!token) {
+                if (statusMsg) {
+                    statusMsg.style.color = "#ef4444";
+                    statusMsg.innerText = "Token đã bị xoá. Nhập lại token hợp lệ để tiếp tục.";
+                }
+                return;
+            }
+
+            if (statusMsg) {
+                statusMsg.style.color = "#10b981";
+                statusMsg.innerText = "Token đã được lưu trong trình duyệt.";
+            }
+        });
+    }
+}
+
 // Tải danh sách ảnh khi trang web load xong
-document.addEventListener("DOMContentLoaded", loadGallery);
+document.addEventListener("DOMContentLoaded", () => {
+    setupTokenInput();
+    loadGallery();
+});
 
 // 1. Hàm hiển thị danh sách ảnh từ folder images/
 async function loadGallery() {
@@ -20,20 +78,22 @@ async function loadGallery() {
     gallery.innerHTML = "<p>Đang tải danh sách ảnh...</p>";
 
     try {
-        const response = await fetch(API_URL, {
-            headers: {
-                "Authorization": `token ${GITHUB_TOKEN}`,
-                "Accept": "application/vnd.github.v3+json"
-            }
-        });
+        const headers = getGithubHeaders();
+        const response = await fetch(API_URL, { headers });
 
-        if (!response.ok) throw new Error("Không thể kết nối đến GitHub API");
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const message = errorData.message || "Không thể kết nối đến GitHub API";
+            throw new Error(message);
+        }
 
         const files = await response.json();
         gallery.innerHTML = "";
 
         // Lọc và chỉ lấy các file định dạng hình ảnh
-        const imageFiles = files.filter(file => file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+        const imageFiles = Array.isArray(files)
+            ? files.filter(file => file && file.name && file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+            : [];
 
         if (imageFiles.length === 0) {
             gallery.innerHTML = "<p>Chưa có hình ảnh nào trong thư mục!</p>";
@@ -58,7 +118,7 @@ async function loadGallery() {
 
     } catch (error) {
         console.error(error);
-        gallery.innerHTML = "<p style='color: #ef4444;'>Lỗi khi tải ảnh. Kiểm tra lại cấu hình TOKEN / Repo!</p>";
+        gallery.innerHTML = `<p style='color: #ef4444;'>Lỗi khi tải ảnh. Kiểm tra lại cấu hình TOKEN / Repo! Chi tiết: ${error.message}</p>`;
     }
 }
 
@@ -67,7 +127,7 @@ function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]); // Lấy đoạn mã Base64 bỏ phần header
+        reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.onerror = error => reject(error);
     });
 }
@@ -84,12 +144,16 @@ async function uploadImage() {
     }
 
     const file = fileInput.files[0];
-    
-    // Đặt tên file độc nhất bằng timestamp để không bị trùng tên
-    const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const uploadUrl = `${API_URL}/${fileName}`;
 
     try {
+        const token = getGithubToken();
+        if (!token) {
+            throw new Error("Thiếu TOKEN GitHub. Hãy nhập token hợp lệ trước khi upload.");
+        }
+
+        const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+        const uploadUrl = `${API_URL}/${fileName}`;
+
         uploadBtn.disabled = true;
         statusMsg.style.color = "#3b82f6";
         statusMsg.innerText = "Đang đẩy ảnh lên GitHub...";
@@ -99,8 +163,9 @@ async function uploadImage() {
         const response = await fetch(uploadUrl, {
             method: "PUT",
             headers: {
-                "Authorization": `token ${GITHUB_TOKEN}`,
+                "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json",
+                "Accept": "application/vnd.github.v3+json"
             },
             body: JSON.stringify({
                 message: `Upload ảnh: ${fileName}`,
@@ -111,12 +176,13 @@ async function uploadImage() {
         if (response.ok) {
             statusMsg.style.color = "#10b981";
             statusMsg.innerText = "Upload ảnh thành công!";
-            fileInput.value = ""; // Reset khung chọn file
-            setTimeout(loadGallery, 1500); // Load lại gallery để hiển thị ảnh mới
-        } else {
-            const errData = await response.json();
-            throw new Error(errData.message || "Upload thất bại");
+            fileInput.value = "";
+            setTimeout(loadGallery, 1500);
+            return;
         }
+
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Upload thất bại");
 
     } catch (error) {
         console.error(error);
