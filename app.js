@@ -1,12 +1,12 @@
 // ==================== CẤU HÌNH GITHUB ====================
 // ⚠️ Thay thế thông tin của bạn tại đây:
-const GITHUB_USERNAME = "USER_NAME_CUA_BAN";
-const GITHUB_REPO     = "TEN_REPO_CUA_BAN";
+const GITHUB_USERNAME = "DRBR-D";
+const GITHUB_REPO     = "Lo";
 const GITHUB_FOLDER   = "images";
 
 // Tạo Personal Access Token (Fine-grained hoặc Classic với quyền 'repo')
 // Dán token của bạn vào đây (Lưu ý: Chỉ dùng token này cho repo riêng tư / nhóm 3 người chơi thân)
-const GITHUB_TOKEN    = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const GITHUB_TOKEN    = "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";
 // ==========================================================
 
 const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${GITHUB_FOLDER}`;
