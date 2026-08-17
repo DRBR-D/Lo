@@ -1,9 +1,8 @@
-// Import các SDK Firebase từ CDN (Dùng phiên bản v10 mượt định dạng ES Module)
+// Import Realtime Database từ Firebase v10
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// Thông tin Firebase Config của mày
+// Config Firebase của mày
 const firebaseConfig = {
     apiKey: "AIzaSyA5o5FjDgTiYtHw8uaK6_eXxAZ6Go2Ppew",
     authDomain: "menu-bcf7e.firebaseapp.com",
@@ -15,44 +14,77 @@ const firebaseConfig = {
     measurementId: "G-7LVTQL5BN8"
 };
 
-// Khởi tạo ứng dụng Firebase
+// Khởi tạo Firebase App & Realtime Database
 const app = initializeApp(firebaseConfig);
-const storage = getStorage(app);
-const db = getFirestore(app);
+const database = getDatabase(app);
+const photosRef = ref(database, 'photos');
 
-const photosCollection = collection(db, "photos");
-
-// 1. Lắng nghe danh sách ảnh Real-time từ Firestore
-const q = query(photosCollection, orderBy("createdAt", "desc"));
-onSnapshot(q, (snapshot) => {
+// 1. Lắng nghe dữ liệu Real-time từ Realtime Database
+onValue(photosRef, (snapshot) => {
     const gallery = document.getElementById("gallery");
     gallery.innerHTML = "";
 
-    if (snapshot.empty) {
+    const data = snapshot.val();
+    if (!data) {
         gallery.innerHTML = "<p class='empty-msg'>Chưa có ảnh nào. Bấm chọn file để tải lên nhé!</p>";
         return;
     }
 
-    snapshot.forEach((doc) => {
-        const data = doc.data();
+    // Chuyển object dữ liệu thành mảng và đảo ngược để ảnh mới nhất lên đầu
+    const items = Object.values(data).reverse();
+
+    items.forEach((item) => {
         const card = document.createElement("div");
         card.className = "img-card";
 
         const img = document.createElement("img");
-        img.src = data.url;
+        img.src = item.base64;
         img.loading = "lazy";
         
-        // Click để xem ảnh gốc ở tab mới
-        card.onclick = () => window.open(data.url, "_blank");
+        // Bấm vào để mở xem ảnh kích thước lớn
+        card.onclick = () => {
+            const w = window.open("");
+            w.document.write(`<img src="${item.base64}" style="max-width:100%; height:auto;">`);
+        };
 
         card.appendChild(img);
         gallery.appendChild(card);
     });
-}, (error) => {
-    console.error("Lỗi Realtime:", error);
 });
 
-// 2. Hàm Upload ảnh lên Firebase Storage & Lưu Link vào Database
+// 2. Hàm nén ảnh và chuyển file ảnh thành chuỗi Base64
+function convertFileToBase64(file, maxWidth = 800) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+                // Nén ảnh chất lượng 0.7 để lưu Database cực nhẹ
+                resolve(canvas.toDataURL("image/jpeg", 0.7));
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+}
+
+// 3. Upload trực tiếp ảnh lên Realtime Database
 window.uploadImage = async function() {
     const fileInput = document.getElementById("imageInput");
     const uploadBtn = document.getElementById("uploadBtn");
@@ -64,28 +96,23 @@ window.uploadImage = async function() {
     }
 
     const file = fileInput.files[0];
-    const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const storageRef = ref(storage, `images/${fileName}`);
 
     try {
         uploadBtn.disabled = true;
         statusMsg.style.color = "#3b82f6";
-        statusMsg.innerText = "Đang tải ảnh lên Firebase...";
+        statusMsg.innerText = "Đang xử lý và tải ảnh lên Realtime Database...";
 
-        // Push file ảnh lên Firebase Storage
-        await uploadBytes(storageRef, file);
-        
-        // Lấy link đường dẫn ảnh công khai
-        const downloadURL = await getDownloadURL(storageRef);
+        // Chuyển ảnh thành Base64
+        const base64String = await convertFileToBase64(file);
 
-        // Lưu đường link ảnh vào Firestore để sync real-time cho 3 người
-        await addDoc(photosCollection, {
-            url: downloadURL,
-            createdAt: new Date()
+        // Đẩy thẳng chuỗi ảnh vào Realtime Database
+        await push(photosRef, {
+            base64: base64String,
+            createdAt: Date.now()
         });
 
         statusMsg.style.color = "#10b981";
-        statusMsg.innerText = "Upload ảnh thành công!";
+        statusMsg.innerText = "Upload thành công lên Realtime Database!";
         fileInput.value = "";
 
     } catch (error) {
